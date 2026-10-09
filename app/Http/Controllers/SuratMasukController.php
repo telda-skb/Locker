@@ -884,6 +884,53 @@ class SuratMasukController extends Controller
 
     /*
     |--------------------------------------------------------------------------
+    | SHOW / DETAIL SURAT MASUK
+    |--------------------------------------------------------------------------
+    */
+
+    public function show(SuratMasuk $suratMasuk)
+    {
+        $this->ensureCanView($suratMasuk);
+
+        $suratMasuk->load([
+            'kategori',
+            'penerima',
+            'disposisi',
+        ]);
+
+        return view(
+            'surat_masuk.show',
+            compact('suratMasuk')
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | EDIT SURAT MASUK
+    |--------------------------------------------------------------------------
+    */
+
+    public function edit(SuratMasuk $suratMasuk)
+    {
+        $this->ensureUserCanManageSurat();
+
+        $suratMasuk->load([
+            'kategori',
+            'penerima',
+        ]);
+
+        $kategoris = KategoriSurat::query()
+            ->orderBy('nama_kategori')
+            ->get();
+
+        return view(
+            'surat_masuk.edit',
+            compact('suratMasuk', 'kategoris')
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | CREATE
     |--------------------------------------------------------------------------
     */
