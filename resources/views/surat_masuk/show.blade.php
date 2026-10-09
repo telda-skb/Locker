@@ -70,40 +70,22 @@
     ========================================================== */
 
     $lampiranPath = $suratMasuk->lampiran_file ?? null;
-    $lampiranUrl = null;
+    // Gunakan URL file yang disiapkan oleh SuratMasukController.
+    // Untuk storage privat, URL ini berupa temporary URL yang ditandatangani.
+    $lampiranUrl = $fileUrl ?? null;
     $lampiranExtension = '';
 
     if (!empty($lampiranPath)) {
-
-        if (
-            filter_var(
-                $lampiranPath,
-                FILTER_VALIDATE_URL
-            )
-        ) {
+        // Kompatibilitas data lama yang menyimpan URL lengkap tetap dipertahankan.
+        if (filter_var($lampiranPath, FILTER_VALIDATE_URL)) {
             $lampiranUrl = $lampiranPath;
-
-        } elseif (
-            Route::has('surat-masuk.preview-lampiran')
-        ) {
-            $lampiranUrl = route(
-                'surat-masuk.preview-lampiran',
-                $suratMasuk
-            );
+        } elseif (empty($lampiranUrl) && Route::has('surat-masuk.preview-lampiran')) {
+            // Fallback ke endpoint internal jika URL storage tidak tersedia.
+            $lampiranUrl = route('surat-masuk.preview-lampiran', $suratMasuk);
         }
 
-        $cleanPath =
-            parse_url(
-                $lampiranPath,
-                PHP_URL_PATH
-            ) ?: $lampiranPath;
-
-        $lampiranExtension = strtolower(
-            pathinfo(
-                $cleanPath,
-                PATHINFO_EXTENSION
-            )
-        );
+        $cleanPath = parse_url($lampiranPath, PHP_URL_PATH) ?: $lampiranPath;
+        $lampiranExtension = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
     }
 
     $isImage = in_array(
@@ -1328,6 +1310,18 @@
             height: 450px;
         }
     }
+
+/* Perapian responsif area lampiran tanpa mengubah fungsi halaman. */
+.sm-file-bar { min-width: 0; }
+.sm-file-info { flex: 1 1 auto; min-width: 0; }
+.sm-file-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.sm-viewer { width: 100%; min-width: 0; }
+.sm-pdf { display: block; width: 100%; min-height: 480px; height: 720px; border: 0; background: #fff; }
+@media (max-width: 640px) {
+  .sm-file-bar { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .sm-file-actions { width: 100%; justify-content: flex-start; }
+  .sm-pdf { height: 70vh; min-height: 420px; }
+}
 </style>
 
 

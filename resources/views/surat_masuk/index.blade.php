@@ -6534,4 +6534,54 @@
         height:11px !important;
     }
 }
+
+/* Perbaikan akhir: tombol aksi tetap satu baris dan rata di kolom Aksi. */
+.archive-table th.action-cell,
+.archive-table td.action-cell {
+    width: 132px !important;
+    min-width: 132px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+.archive-table tbody td.action-cell {
+    display: table-cell !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+.archive-table tbody td.action-cell::before { content: none !important; }
+.archive-table .action-buttons {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    white-space: nowrap !important;
+}
+.archive-table .action-button {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+@media (max-width: 760px) {
+    .archive-table tbody td.action-cell {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+    .archive-table tbody td.action-cell::before { content: attr(data-label) !important; }
+    .archive-table .action-buttons { margin-left: auto !important; flex: 0 0 auto !important; }
+}
 </style>
