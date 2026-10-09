@@ -1818,7 +1818,8 @@ class SuratKeluarController extends Controller
 
         $fileUrl =
             $this->getFileUrl(
-                $suratKeluar->lampiran_file
+                $suratKeluar->lampiran_file,
+                $suratKeluar
             );
 
         return view(
@@ -1863,7 +1864,8 @@ class SuratKeluarController extends Controller
 
         $fileUrl =
             $this->getFileUrl(
-                $suratKeluar->lampiran_file
+                $suratKeluar->lampiran_file,
+                $suratKeluar
             );
 
         return view(
@@ -2254,48 +2256,6 @@ class SuratKeluarController extends Controller
             $this->getMimeTypeFromPath(
                 $path
             );
-
-        try {
-            if (
-                method_exists(
-                    $disk,
-                    'temporaryUrl'
-                )
-            ) {
-                $temporaryUrl =
-                    $disk->temporaryUrl(
-                        $path,
-                        now()->addMinutes(30),
-                        [
-                            'ResponseContentType' =>
-                                $mimeType,
-
-                            'ResponseContentDisposition' =>
-                                'inline; filename="' .
-                                basename($path) .
-                                '"',
-                        ]
-                    );
-
-                if ($temporaryUrl) {
-                    return redirect()->away(
-                        $temporaryUrl
-                    );
-                }
-            }
-
-        } catch (Throwable $e) {
-            Log::warning(
-                'Gagal membuat temporary URL preview surat keluar.',
-                [
-                    'path' =>
-                        $path,
-
-                    'message' =>
-                        $e->getMessage(),
-                ]
-            );
-        }
 
         try {
             $stream =
@@ -4160,7 +4120,7 @@ class SuratKeluarController extends Controller
 
             if (!$saved) {
                 throw new RuntimeException(
-                    'File gagal disimpan ke Supabase.'
+                    'File gagal disimpan ke storage lokal.'
                 );
             }
 
@@ -4295,27 +4255,8 @@ class SuratKeluarController extends Controller
 
     private function getStorageDisk(): string
     {
-        $disk =
-            strtolower(
-                trim(
-                    (string) config(
-                        'filesystems.default',
-                        'supabase'
-                    )
-                )
-            );
-
-        if ($disk === '') {
-            return 'supabase';
-        }
-
-        if ($disk !== 'supabase') {
-            throw new RuntimeException(
-                'FILESYSTEM_DISK harus diset ke "supabase".'
-            );
-        }
-
-        return 'supabase';
+        // Semua lampiran baru disimpan pada storage lokal persisten Laravel.
+        return 'local';
     }
 
     private function storage(): FilesystemAdapter
@@ -4401,73 +4342,25 @@ class SuratKeluarController extends Controller
     */
 
     private function getFileUrl(
-        ?string $file
+        ?string $file,
+        ?SuratKeluar $suratKeluar = null
     ): ?string {
         if (!$file) {
             return null;
         }
 
-        if (
-            filter_var(
-                $file,
-                FILTER_VALIDATE_URL
-            )
-        ) {
+        // URL lama tetap dapat dibuka selama migrasi data berlangsung.
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
             return $file;
         }
 
-        try {
-            $disk =
-                $this->storage();
-
-            if (
-                !method_exists(
-                    $disk,
-                    'temporaryUrl'
-                )
-            ) {
-                return null;
-            }
-
-            $mimeType =
-                $this->getMimeTypeFromPath(
-                    $file
-                );
-
-            $url =
-                $disk->temporaryUrl(
-                    $file,
-                    now()->addMinutes(30),
-                    [
-                        'ResponseContentType' =>
-                            $mimeType,
-
-                        'ResponseContentDisposition' =>
-                            'inline; filename="' .
-                            basename($file) .
-                            '"',
-                    ]
-                );
-
-            return $url ?: null;
-
-        } catch (Throwable $e) {
-            Log::warning(
-                'Gagal membuat URL lampiran Surat Keluar.',
-                [
-                    'message' =>
-                        $e->getMessage(),
-
-                    'file' =>
-                        $file,
-
-                    'disk' =>
-                        $this->getStorageDisk(),
-                ]
-            );
-
+        if (!$suratKeluar) {
             return null;
         }
+
+        return route('surat-keluar.preview-lampiran', [
+            'suratKeluar' => $suratKeluar->getRouteKey(),
+        ]);
     }
 
     /*

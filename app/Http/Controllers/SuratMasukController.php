@@ -2349,17 +2349,6 @@ class SuratMasukController extends Controller
         string $diskName
     ): string {
 
-        if (
-            $diskName !==
-            'supabase'
-        ) {
-
-            throw new RuntimeException(
-                'Penyimpanan file E-Arsip wajib menggunakan Supabase.'
-            );
-        }
-
-
         $originalSize =
             filesize(
                 $inputPath
@@ -3255,142 +3244,46 @@ class SuratMasukController extends Controller
         string $prefix,
         string $diskName
     ): string {
-
-        if (
-            $contents === ''
-        ) {
-
-            throw new RuntimeException(
-                'Data file kosong.'
-            );
+        if ($contents === '') {
+            throw new RuntimeException('Data file kosong.');
         }
 
-
-        if (
-            strlen(
-                $contents
-            ) >
-            self::MAX_FILE_SIZE
-        ) {
-
-            throw new RuntimeException(
-                'Data file melebihi batas 20 MB.'
-            );
+        if (strlen($contents) > self::MAX_FILE_SIZE) {
+            throw new RuntimeException('Data file melebihi batas 20 MB.');
         }
 
-
-        if (
-            $diskName !==
-            'supabase'
-        ) {
-
-            throw new RuntimeException(
-                'Penyimpanan file E-Arsip wajib menggunakan Supabase.'
-            );
+        if ($diskName !== 'local') {
+            throw new RuntimeException('FILESYSTEM_DISK harus menggunakan local.');
         }
 
+        $safePrefix = Str::slug($prefix, '-');
+        $extension = strtolower(trim($extension));
+        if (!in_array($extension, self::ALLOWED_FILE_EXTENSIONS, true)) {
+            throw new RuntimeException('Ekstensi file tidak diizinkan.');
+        }
 
-        $safePrefix =
-            Str::slug(
-                $prefix,
-                '-'
-            );
-
-
-        $fileName =
-            $safePrefix .
-            '_' .
-            now()->format(
-                'Ymd_His'
-            ) .
-            '_' .
-            Str::lower(
-                Str::random(12)
-            ) .
-            '.' .
-            strtolower(
-                trim(
-                    $extension
-                )
-            );
-
-
-        $path =
-            'lampiran/surat_masuk/' .
-            $fileName;
-
+        $fileName = $safePrefix . '_' . now()->format('Ymd_His') . '_' . Str::lower(Str::random(12)) . '.' . $extension;
+        $path = 'lampiran/surat_masuk/' . $fileName;
 
         try {
-
-            $disk =
-                Storage::disk(
-                    'supabase'
-                );
-
-
-            $saved =
-                $disk->put(
-                    $path,
-                    $contents,
-                    [
-                        'visibility' =>
-                            'private',
-
-                        'ContentType' =>
-                            $mimeType,
-                    ]
-                );
-
-
-            if (
-                !$saved
-            ) {
-
-                throw new RuntimeException(
-                    'Supabase menolak penyimpanan file.'
-                );
+            $saved = Storage::disk('local')->put($path, $contents);
+            if (!$saved) {
+                throw new RuntimeException('Laravel gagal menyimpan file ke storage lokal.');
             }
-
-
             return $path;
-
-        } catch (
-            Throwable $e
-        ) {
-
-            Log::error(
-                'Gagal menyimpan binary Surat Masuk ke Supabase.',
-                [
-                    'message' =>
-                        $e->getMessage(),
-
-                    'path' =>
-                        $path,
-
-                    'extension' =>
-                        $extension,
-
-                    'mime' =>
-                        $mimeType,
-
-                    'size' =>
-                        strlen(
-                            $contents
-                        ),
-
-                    'disk' =>
-                        'supabase',
-                ]
-            );
-
-
-            throw new RuntimeException(
-                'Gagal menyimpan file ke Supabase: ' .
-                $e->getMessage(),
-                previous: $e
-            );
+        } catch (Throwable $e) {
+            Log::error('Gagal menyimpan file Surat Masuk ke storage lokal.', [
+                'message' => $e->getMessage(),
+                'path' => $path,
+                'extension' => $extension,
+                'mime' => $mimeType,
+                'size' => strlen($contents),
+                'disk' => 'local',
+            ]);
+            throw new RuntimeException('Gagal menyimpan file ke storage lokal: ' . $e->getMessage(), previous: $e);
         }
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -3684,139 +3577,36 @@ class SuratMasukController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function previewLampiran(
-        SuratMasuk $suratMasuk
-    ) {
+    public function previewLampiran(SuratMasuk $suratMasuk)
+    {
+        $this->ensureCanView($suratMasuk);
+        $file = $suratMasuk->lampiran_file;
 
-        $this->ensureCanView(
-            $suratMasuk
-        );
-
-
-        $file =
-            $suratMasuk->lampiran_file;
-
-
-        if (
-            !$file
-        ) {
-
-            abort(
-                404,
-                'File lampiran tidak ditemukan.'
-            );
+        if (!$file) {
+            abort(404, 'File lampiran tidak ditemukan.');
         }
 
-
-        if (
-            filter_var(
-                $file,
-                FILTER_VALIDATE_URL
-            )
-        ) {
-
-            return redirect()->away(
-                $file
-            );
+        // Dukungan untuk record lama yang masih menyimpan URL eksternal.
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
+            return redirect()->away($file);
         }
 
-
-        $diskName =
-            $this->getStorageDisk();
-
-
-        try {
-
-            $disk =
-                Storage::disk(
-                    $diskName
-                );
-
-
-            if (
-                !method_exists(
-                    $disk,
-                    'temporaryUrl'
-                )
-            ) {
-
-                throw new RuntimeException(
-                    'Storage Supabase tidak mendukung temporary URL.'
-                );
-            }
-
-
-            $mimeType =
-                $this->getMimeTypeFromPath(
-                    $file
-                );
-
-
-            $url =
-                $disk->temporaryUrl(
-                    $file,
-                    now()->addMinutes(30),
-                    [
-                        'ResponseContentType' =>
-                            $mimeType,
-
-                        'ResponseContentDisposition' =>
-                            'inline; filename="' .
-                            basename($file) .
-                            '"',
-                    ]
-                );
-
-
-            if (
-                !$url
-            ) {
-
-                throw new RuntimeException(
-                    'Supabase gagal membuat URL sementara.'
-                );
-            }
-
-
-            return redirect()->away(
-                $url
-            );
-
-        } catch (
-            HttpException $e
-        ) {
-
-            throw $e;
-
-        } catch (
-            Throwable $e
-        ) {
-
-            Log::error(
-                'Gagal preview lampiran Surat Masuk.',
-                [
-                    'message' =>
-                        $e->getMessage(),
-
-                    'file' =>
-                        $file,
-
-                    'disk' =>
-                        $diskName,
-
-                    'surat_id' =>
-                        $suratMasuk->id,
-                ]
-            );
-
-
-            return back()->with(
-                'error',
-                'Gagal membuka lampiran file: ' .
-                $e->getMessage()
-            );
+        $disk = Storage::disk($this->getStorageDisk());
+        if (!$disk->exists($file)) {
+            abort(404, 'File lampiran tidak ditemukan di penyimpanan lokal.');
         }
+
+        $mimeType = $this->getMimeTypeFromPath($file);
+        $contents = $disk->get($file);
+
+        return response($contents, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . addslashes(basename($file)) . '"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store, max-age=0',
+        ]);
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -3824,474 +3614,39 @@ class SuratMasukController extends Controller
     |--------------------------------------------------------------------------
     */
 
-    public function downloadLampiran(
-        SuratMasuk $suratMasuk
-    ) {
+    public function downloadLampiran(SuratMasuk $suratMasuk)
+    {
+        $this->ensureCanView($suratMasuk);
+        $file = $suratMasuk->lampiran_file;
 
-        $this->ensureCanView(
-            $suratMasuk
-        );
-
-
-        $file =
-            $suratMasuk->lampiran_file;
-
-
-        if (
-            !$file
-        ) {
-
-            abort(
-                404,
-                'File lampiran tidak ditemukan.'
-            );
+        if (!$file) {
+            abort(404, 'File lampiran tidak ditemukan.');
         }
 
-
-        if (
-            filter_var(
-                $file,
-                FILTER_VALIDATE_URL
-            )
-        ) {
-
-            return redirect()->away(
-                $file
-            );
+        // Dukungan untuk record lama yang masih menyimpan URL eksternal.
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
+            return redirect()->away($file);
         }
 
-
-        $diskName =
-            $this->getStorageDisk();
-
-
-        try {
-
-            $disk =
-                Storage::disk(
-                    $diskName
-                );
-
-
-            if (
-                !method_exists(
-                    $disk,
-                    'temporaryUrl'
-                )
-            ) {
-
-                throw new RuntimeException(
-                    'Storage Supabase tidak mendukung temporary URL.'
-                );
-            }
-
-
-            $mimeType =
-                $this->getMimeTypeFromPath(
-                    $file
-                );
-
-
-            $url =
-                $disk->temporaryUrl(
-                    $file,
-                    now()->addMinutes(30),
-                    [
-                        'ResponseContentDisposition' =>
-                            'attachment; filename="' .
-                            basename($file) .
-                            '"',
-
-                        'ResponseContentType' =>
-                            $mimeType,
-                    ]
-                );
-
-
-            if (
-                !$url
-            ) {
-
-                throw new RuntimeException(
-                    'Supabase gagal membuat URL download.'
-                );
-            }
-
-
-            return redirect()->away(
-                $url
-            );
-
-        } catch (
-            HttpException $e
-        ) {
-
-            throw $e;
-
-        } catch (
-            Throwable $e
-        ) {
-
-            Log::error(
-                'Gagal download lampiran Surat Masuk.',
-                [
-                    'message' =>
-                        $e->getMessage(),
-
-                    'file' =>
-                        $file,
-
-                    'disk' =>
-                        $diskName,
-
-                    'surat_id' =>
-                        $suratMasuk->id,
-                ]
-            );
-
-
-            return back()->with(
-                'error',
-                'Gagal mengunduh lampiran file: ' .
-                $e->getMessage()
-            );
+        $disk = Storage::disk($this->getStorageDisk());
+        if (!$disk->exists($file)) {
+            abort(404, 'File lampiran tidak ditemukan di penyimpanan lokal.');
         }
-    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | SHOW
-    |--------------------------------------------------------------------------
-    */
+        $contents = $disk->get($file);
 
-    public function show(
-        SuratMasuk $suratMasuk
-    ) {
-
-        $this->ensureCanView(
-            $suratMasuk
-        );
-
-
-        $suratMasuk->load(
+        return response()->streamDownload(
+            function () use ($contents): void {
+                echo $contents;
+            },
+            basename($file),
             [
-                'kategori',
-                'penerima',
-                'disposisi.dari',
-                'disposisi.kepada',
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store, max-age=0',
             ]
         );
-
-
-        $daftarStaf =
-            User::query()
-                ->where(
-                    'id',
-                    '!=',
-                    Auth::id()
-                )
-                ->where(
-                    'is_active',
-                    true
-                )
-                ->where(
-                    function (
-                        $query
-                    ): void {
-
-                        $query
-                            ->whereRaw(
-                                'LOWER(TRIM(role)) = ?',
-                                ['staff']
-                            )
-                            ->orWhereRaw(
-                                'LOWER(TRIM(role)) = ?',
-                                ['staf']
-                            );
-                    }
-                )
-                ->orderBy(
-                    'name'
-                )
-                ->get();
-
-
-        $fileUrl =
-            $this->getFileUrl(
-                $suratMasuk->lampiran_file
-            );
-
-
-        return view(
-            'surat_masuk.show',
-            compact(
-                'suratMasuk',
-                'fileUrl',
-                'daftarStaf'
-            )
-        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | STORE DISPOSISI
-    |--------------------------------------------------------------------------
-    */
-
-    public function storeDisposisi(
-        Request $request,
-        SuratMasuk $suratMasuk
-    ) {
-
-        $this->ensureUserCanManageSurat();
-
-
-        $validated =
-            $request->validate(
-                [
-                    'tujuan_user_id' => [
-                        'required',
-                        'integer',
-                        Rule::exists(
-                            'users',
-                            'id'
-                        )->where(
-                            function (
-                                $query
-                            ): void {
-
-                                $query
-                                    ->where(
-                                        'is_active',
-                                        true
-                                    )
-                                    ->where(
-                                        function (
-                                            $q
-                                        ): void {
-
-                                            $q
-                                                ->whereRaw(
-                                                    'LOWER(TRIM(role)) = ?',
-                                                    ['staff']
-                                                )
-                                                ->orWhereRaw(
-                                                    'LOWER(TRIM(role)) = ?',
-                                                    ['staf']
-                                                );
-                                        }
-                                    );
-                            }
-                        ),
-                    ],
-
-                    'instruksi' => [
-                        'required',
-                        'string',
-                        'max:5000',
-                    ],
-
-                    'batas_waktu' => [
-                        'nullable',
-                        'date',
-                    ],
-                ],
-                [
-                    'tujuan_user_id.required' =>
-                        'Staf tujuan wajib dipilih.',
-
-                    'tujuan_user_id.exists' =>
-                        'Staf tujuan tidak valid atau tidak aktif.',
-
-                    'instruksi.required' =>
-                        'Instruksi disposisi wajib diisi.',
-
-                    'instruksi.max' =>
-                        'Instruksi disposisi maksimal 5.000 karakter.',
-
-                    'batas_waktu.date' =>
-                        'Batas waktu disposisi tidak valid.',
-                ]
-            );
-
-
-        $tujuanUserId =
-            (int) $validated['tujuan_user_id'];
-
-
-        if (
-            $tujuanUserId ===
-            (int) Auth::id()
-        ) {
-
-            return back()
-                ->withInput()
-                ->withErrors(
-                    [
-                        'tujuan_user_id' =>
-                            'Anda tidak dapat mengirim disposisi kepada diri sendiri.',
-                    ]
-                );
-        }
-
-
-        DB::beginTransaction();
-
-
-        try {
-
-            $instruksi =
-                trim(
-                    (string) $validated['instruksi']
-                );
-
-
-            $disposisiData = [
-                'surat_masuk_id' =>
-                    $suratMasuk->id,
-
-                'dari_user_id' =>
-                    (int) Auth::id(),
-
-                'kepada_user_id' =>
-                    $tujuanUserId,
-
-                'instruksi' =>
-                    $instruksi,
-
-                'status' =>
-                    'menunggu',
-
-                'batas_waktu' =>
-                    $validated['batas_waktu'] ??
-                    null,
-            ];
-
-
-            if (
-                Schema::hasColumn(
-                    'disposisis',
-                    'isi_disposisi'
-                )
-            ) {
-
-                $disposisiData['isi_disposisi'] =
-                    $instruksi;
-            }
-
-
-            if (
-                Schema::hasColumn(
-                    'disposisis',
-                    'sifat'
-                )
-            ) {
-
-                $disposisiData['sifat'] =
-                    'biasa';
-            }
-
-
-            $suratMasuk
-                ->disposisi()
-                ->create(
-                    $disposisiData
-                );
-
-
-            $suratMasuk->update(
-                [
-                    'status' =>
-                        'didisposisikan',
-                ]
-            );
-
-
-            $this->logActivity(
-                'disposisi',
-                'surat_masuk',
-                'Mendisposisikan surat masuk ' .
-                $suratMasuk->nomor_agenda
-            );
-
-
-            DB::commit();
-
-
-            return back()->with(
-                'success',
-                'Disposisi surat berhasil dikirim ke staff yang dituju.'
-            );
-
-        } catch (
-            Throwable $e
-        ) {
-
-            DB::rollBack();
-
-
-            Log::error(
-                'Gagal melakukan disposisi Surat Masuk.',
-                [
-                    'message' =>
-                        $e->getMessage(),
-
-                    'surat_id' =>
-                        $suratMasuk->id,
-
-                    'user_id' =>
-                        Auth::id(),
-                ]
-            );
-
-
-            return back()
-                ->withInput()
-                ->with(
-                    'error',
-                    'Gagal memproses disposisi: ' .
-                    $e->getMessage()
-                );
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | EDIT
-    |--------------------------------------------------------------------------
-    */
-
-    public function edit(
-        SuratMasuk $suratMasuk
-    ) {
-
-        $this->ensureUserCanManageSurat();
-
-        $this->cleanupPdfPreview();
-
-
-        $kategoris =
-            KategoriSurat::query()
-                ->orderBy(
-                    'nama_kategori'
-                )
-                ->get();
-
-
-        $fileUrl =
-            $this->getFileUrl(
-                $suratMasuk->lampiran_file
-            );
-
-        return view(
-            'surat_masuk.edit',
-            compact(
-                'suratMasuk',
-                'kategoris',
-                'fileUrl'
-            )
-        );
-    }
 
     /*
     |--------------------------------------------------------------------------
@@ -4867,30 +4222,13 @@ class SuratMasukController extends Controller
 
     private function getStorageDisk(): string
     {
-        $disk =
-            strtolower(
-                trim(
-                    (string) config(
-                        'filesystems.default',
-                        ''
-                    )
-                )
-            );
-
-
-        if (
-            $disk !==
-            'supabase'
-        ) {
-
-            throw new RuntimeException(
-                'FILESYSTEM_DISK harus diset ke "supabase". File surat tidak boleh disimpan permanen di server.'
-            );
+        $disk = strtolower(trim((string) config('filesystems.default', 'local')));
+        if ($disk !== 'local') {
+            throw new RuntimeException('FILESYSTEM_DISK harus diset ke "local" untuk penyimpanan file surat.');
         }
-
-
-        return 'supabase';
+        return 'local';
     }
+
 
     /*
     |--------------------------------------------------------------------------
