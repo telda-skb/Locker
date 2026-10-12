@@ -3703,4 +3703,64 @@ body.date-picker-lock{overflow:hidden}
         height:11px !important;
     }
 }
+
+
+/* PERAPIAN TOMBOL AKSI SURAT KELUAR */
+.archive-table .action-cell,
+.archive-table th.action-cell,
+.archive-table td.action-cell {
+    width: 140px !important;
+    min-width: 140px;
+    white-space: nowrap;
+    text-align: center;
+    vertical-align: middle;
+}
+.archive-table .action-buttons {
+    display: inline-flex !important;
+    width: auto !important;
+    max-width: 100%;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    margin: 0 auto !important;
+    white-space: nowrap;
+}
+.archive-table .action-button {
+    box-sizing: border-box;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 34px !important;
+    min-width: 34px;
+    height: 34px !important;
+    flex: 0 0 34px !important;
+    margin: 0 !important;
+}
+.archive-table .action-cell form {
+    display: inline-flex !important;
+    flex: 0 0 34px;
+    width: 34px;
+    margin: 0 !important;
+    padding: 0;
+}
+.archive-table .action-cell form .action-button {
+    width: 34px !important;
+    min-width: 34px;
+    flex: 0 0 34px !important;
+}
+@media (max-width: 767px) {
+    .archive-table tbody td.action-cell {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+        min-width: 0;
+        gap: 10px;
+    }
+    .archive-table tbody td.action-cell .action-buttons {
+        margin-left: auto !important;
+    }
+}
 </style>

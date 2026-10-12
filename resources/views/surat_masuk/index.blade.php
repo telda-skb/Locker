@@ -6584,4 +6584,80 @@
     .archive-table tbody td.action-cell::before { content: attr(data-label) !important; }
     .archive-table .action-buttons { margin-left: auto !important; flex: 0 0 auto !important; }
 }
+
+/* ==========================================================================
+   FIX AKSI: tombol Show, Edit, Delete sejajar dan konsisten
+   ========================================================================== */
+.archive-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+.archive-table thead th.action-cell,
+.archive-table tbody td.action-cell {
+    width: 140px !important;
+    min-width: 140px !important;
+    max-width: 140px !important;
+    padding: 10px 8px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+.archive-table tbody td.action-cell {
+    display: table-cell !important;
+}
+.archive-table tbody td.action-cell::before {
+    content: none !important;
+}
+.archive-table .action-buttons {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+.archive-table .action-buttons .action-button {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 34px !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
+}
+.archive-table .action-buttons .action-button svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+}
+@media (max-width: 760px) {
+    .archive-table tbody td.action-cell {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+    .archive-table tbody td.action-cell::before {
+        content: attr(data-label) !important;
+    }
+    .archive-table .action-buttons {
+        width: auto !important;
+        margin-left: auto !important;
+        flex: 0 0 auto !important;
+    }
+}
+
 </style>
