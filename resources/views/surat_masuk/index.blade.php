@@ -3296,6 +3296,84 @@
     .surat-filter-main{grid-template-columns:minmax(0,1fr) 76px!important;gap:7px!important}
     .surat-filter-submit{width:76px!important;min-width:76px!important;padding:0 7px!important}
 }
+
+/* ================================================================
+   TOMBOL AKSI — disamakan dengan tampilan halaman Surat Keluar
+   ================================================================ */
+.archive-table thead th.action-cell,
+.archive-table tbody td.action-cell {
+    width: 132px !important;
+    min-width: 132px !important;
+    max-width: 132px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+.archive-table tbody td.action-cell {
+    display: table-cell !important;
+    padding: 10px 8px !important;
+}
+.archive-table tbody td.action-cell::before {
+    content: none !important;
+}
+.archive-table .action-buttons {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    width: auto !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    white-space: nowrap !important;
+}
+.archive-table .action-buttons .action-button {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    flex: 0 0 36px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+.archive-table .action-buttons .action-button svg {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    flex: 0 0 16px !important;
+}
+@media (max-width: 760px) {
+    .archive-table thead th.action-cell {
+        width: 132px !important;
+        min-width: 132px !important;
+    }
+    .archive-table tbody td.action-cell {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+    }
+    .archive-table tbody td.action-cell::before {
+        content: attr(data-label) !important;
+    }
+    .archive-table .action-buttons {
+        width: auto !important;
+        margin-left: auto !important;
+        flex: 0 0 auto !important;
+        gap: 6px !important;
+    }
+}
+
 </style>
 @endpush
 <div class="surat-page">
