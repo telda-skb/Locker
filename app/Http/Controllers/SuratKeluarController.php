@@ -1868,6 +1868,7 @@ class SuratKeluarController extends Controller
                 $suratKeluar
             );
 
+        // Render formulir edit, bukan halaman daftar surat.
         return view(
             'surat_keluar.edit',
             compact(
